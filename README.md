@@ -4,7 +4,7 @@ A working npm-workspace monorepo: Fastify API, Next.js restaurant + analytics da
 
 ## Local setup (four commands)
 
-Prerequisites: **Node 22 LTS** (20.19+ also supported), npm 10+, internet for npm dependencies. `better-sqlite3` normally downloads a prebuilt binary; unsupported runtimes need native build tools. No Composer, PHP or external database required.
+Prerequisites: **Node 22.12+ within Node 22 LTS** (or Node 24/26), npm 10+, internet for npm dependencies. Node 20 is not supported by this repo's Vitest toolchain. `better-sqlite3` normally downloads a prebuilt binary; unsupported runtimes need native build tools. No Composer, PHP or external database required.
 
 ```powershell
 npm install
@@ -51,7 +51,7 @@ await analytics.flush();
 
 ```ts
 import { ServerTracker, HttpTransport } from '@pkg/sdk-node';
-const tracker = new ServerTracker(new HttpTransport(endpoint, process.env.ANALYTICS_SECRET!), console.error);
+const tracker = new ServerTracker(new HttpTransport(endpoint, process.env.DEMO_SECRET_KEY!), console.error);
 await tracker.track('order_created', { order_id: 'opaque-id', total: 2500, item_count: 2, currency: 'USD' }, userId, anonymousId, sessionId);
 ```
 
