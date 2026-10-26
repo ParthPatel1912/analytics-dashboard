@@ -44,7 +44,7 @@ Use a current UTC timestamp when trying the example. Names must be lower snake_c
 }
 ```
 
-Indexes refer to the submitted array. Accepted + duplicates + rejected count = batch size. Duplicate UUIDs do not update existing rows, including retries with changed content. Malformed duplicates still undergo validation. 1–50 events per batch. A completely invalid, structurally valid batch still returns 202 with all events rejected.
+Indexes refer to the submitted array. Accepted + duplicates + rejected count = batch size. Duplicate UUIDs do not update existing rows, including retries with changed content. Malformed duplicates still undergo validation. 1–50 events per batch. A completely invalid batch returns 422 with `error: "no_valid_events"` and the same accepted/duplicates/rejected fields; mixed valid/invalid batches remain 202.
 
 ```sh
 curl -X OPTIONS http://localhost:4000/api/v1/events/batch \

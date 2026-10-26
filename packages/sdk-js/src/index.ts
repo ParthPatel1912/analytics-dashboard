@@ -79,6 +79,8 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
   let timer: ReturnType<typeof setInterval> | undefined,
     retry: ReturnType<typeof setTimeout> | undefined;
   let unwatch: (() => void) | undefined;
+  let request: AbortController | undefined,
+    requestTimeout: ReturnType<typeof setTimeout> | undefined;
   const memory: Record<string, string> = {};
   const log = (e: unknown) => {
     if (options.debug)
@@ -96,14 +98,18 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
   };
   const read = (key: string): string | null => {
     if (!browser) return null;
+    // Identity/consent cookies are also updated when a quota-full localStorage
+    // remains readable. Prefer that newer fallback over its stale stored value.
+    if (key !== 'queue') {
+      const cookie = safe(() => {
+        const value = document.cookie.split('; ').find((c) => c.startsWith(prefix + key + '='));
+        return value ? decodeURIComponent(value.slice(prefix.length + key.length + 1)) : null;
+      }, null);
+      if (cookie !== null) return cookie;
+    }
     const local = safe(() => localStorage.getItem(prefix + key), null);
     if (local !== null) return local;
-    return safe(() => {
-      const cookie = document.cookie.split('; ').find((c) => c.startsWith(prefix + key + '='));
-      return cookie
-        ? decodeURIComponent(cookie.slice(prefix.length + key.length + 1))
-        : memory[key] || null;
-    }, memory[key] || null);
+    return memory[key] || null;
   };
   const write = (key: string, value: string, cookie = false) => {
     memory[key] = value;
@@ -207,17 +213,24 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
       const items = takeBatch(),
         current = generation;
       let response: Response | undefined;
+      const controller = new AbortController();
+      request = controller;
+      requestTimeout = setTimeout(() => controller.abort(), 10000);
       try {
         response = await fetch(options.endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Analytics-Key': options.writeKey },
           body: JSON.stringify({ events: items.map((i) => i.event) }),
           keepalive: true,
+          signal: controller.signal,
         });
       } catch (e) {
         log(e);
+      } finally {
+        if (requestTimeout) clearTimeout(requestTimeout);
+        if (request === controller) request = undefined;
       }
-      if (current !== generation) return;
+      if (current !== generation || stopped) return;
       if (response && (response.ok || (response.status < 500 && response.status !== 429))) {
         remove(items);
         nextAttempt = 0;
@@ -347,6 +360,10 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
       safe(() => {
         optedOut = true;
         generation++;
+        request?.abort();
+        if (requestTimeout) clearTimeout(requestTimeout);
+        if (retry) clearTimeout(retry);
+        nextAttempt = 0;
         queue = [];
         persist();
         write('optout', '1', true);
@@ -358,8 +375,10 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
       }, undefined),
     shutdown: () =>
       safe(() => {
-        void flush();
+        void flush(true);
         stopped = true;
+        request?.abort();
+        if (requestTimeout) clearTimeout(requestTimeout);
         if (timer) clearInterval(timer);
         if (retry) clearTimeout(retry);
         unwatch?.();

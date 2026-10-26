@@ -11,6 +11,11 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 | A03 | major | `.env.local`, `.env.production` and other local secret variants were not ignored. | Ignore `.env.*` except `.env.example`, plus logs and temporary audit output. | `node --test scripts/packages.test.mjs`: ignore test failed before, passed after. | Fixed |
 | A04 | minor | A jsdom test that mocked both cookie accessors left an own-property mock descriptor, breaking later tests. | Restore the prototype cookie accessor during cleanup; preserve every original assertion. | New lifecycle/queue tests initially failed with leaked `blocked` getter; all 39 tests pass after cleanup. | Fixed |
 | A05 | major | Existing tests could not detect external order tracking before commit. | Add an explicit transport observer test across the transaction boundary. | `order-before-commit` mutation survived 4 original order tests, fails with the fifth test. | Fixed (test gap) |
+| A06 | major | Readable but quota-full localStorage overrode a newer opt-out cookie on reload. | Read the mirrored consent/identity cookie first. | `failures.test.ts`: consent regression failed before, passed after. | Fixed |
+| A07 | minor | A failed in-flight fetch could recreate a retry timer after shutdown. | Abort delivery and clear request/retry timers; never schedule after stop. | Timer count was 1 after shutdown, now 0. | Fixed |
+| A08 | major | A fetch that never settled held the SDK busy forever. | Abort each fetch after 10 seconds and enter ordinary retry/backoff. | Hung-fetch recovery test failed before (one attempt), passed after (delivery on retry). | Fixed |
+| A09 | minor | Old Retry-After state survived opt-out and delayed later opted-in events. | Cancel backoff and clear its deadline during opt-out. | Immediate new-event delivery regression failed before, passed after. | Fixed |
+| A10 | minor | Wholly invalid huge/deep-property batches returned 202, conflicting with the newer QA request's clean-4xx rule. | Return indexed 422 when every event is rejected; preserve partial-batch 202. | API failure regression failed before (202), passed after (422); mixed batch remains 202. | Fixed |
 
 ## Phase 1 — clean-state setup
 
@@ -24,7 +29,7 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 2. Static/build: passed.
 3. Test coverage + mutation checks: passed.
 4. Live end-to-end automation: passed.
-5. Failure modes: pending.
+5. Failure modes: passed.
 6. Risky-code review and EXPLAIN: pending.
 7. Dashboard/browser checks: pending.
 8. Documentation + final clean verification: pending.
@@ -69,4 +74,14 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 - npm run test:e2e: exit 0, nine grouped checks against actual Fastify and Next dev processes on ephemeral loopback ports, with isolated SQLite and random per-run credentials.
 - Verified: 202 acceptance, retry duplicate counts + unchanged total, partial rejection index/reason, 401/403/422/413 responses, OPTIONS, body/query beacon keys, full browser-shaped event/order flow, authoritative server total despite tampered price, forwarded anonymous/session identity, no event for invalid order, 120/min throttle and Retry-After, dashboard proxy, no uncaught/unhandled errors or credential leakage in logs.
 - The permanent command builds SDKs before launch and tears down its own child process trees and temporary database in finally. It does not depend on a manually running server or change the developer database.
+
+
+## Phase 5 — failure modes
+
+- Before fixes: targeted failure tests 1 passed / 5 failed (four SDK bugs and all-invalid API status). After: 6/6 passed.
+- npm run test:report: 45/45 passed; API 25, browser/React SDK 18, Node SDK 2.
+- npm run test:failures: exit 0. Actual API process stopped while SDK ran, queued event persisted, SDK instance reloaded, API restarted, same UUID delivered exactly once. Twelve concurrent HTTP retries produced one acceptance and eleven duplicates.
+- Malformed JSON 400, unsupported XML 415, Fastify-parsed plain text 422, empty JSON body 400, wholly huge/deep properties 422; API stayed healthy. The first harness expectation incorrectly assumed text/plain was unsupported; this was corrected to test both the built-in text parser and unsupported XML, without changing production media handling.
+- Server logs checked for uncaught/unhandled errors and actual generated secrets; none found. Existing order-rollback and tracking-failure isolation tests remain passing.
+- npm run typecheck: exit 0.
 

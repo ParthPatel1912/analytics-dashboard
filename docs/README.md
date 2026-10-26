@@ -23,7 +23,7 @@ Create an empty UTF-8 database and put `DATABASE_URL=postgres://...` or `DATABAS
 
 The [root README](../README.md#five-line-browser-integration) shows browser and server integration. Never put server secrets in `NEXT_PUBLIC_*`. Supply only opaque user IDs; `identify` traits are caller-provided event properties and should contain no personal data. The demo does not send the name/email fields to any endpoint; it hashes the email client-side to demonstrate pseudonymous identification. Do Not Track / SDK opt-out disables browser delivery and forwarded browser identity; server business events still exist with a fresh anonymous identity.
 
-`reset()` creates a new anonymous identity and session for future events (e.g. logout), while earlier queued events retain their original envelope. `shutdown()` initiates a best-effort flush, removes listeners and stops timers. Call and await `flush()` first when teardown must wait for delivery.
+`reset()` creates a new anonymous identity and session for future events (e.g. logout), while earlier queued events retain their original envelope. `shutdown()` attempts a beacon, aborts an active fetch, removes listeners and stops timers. Call and await `flush()` first when teardown must wait for acknowledged delivery.
 
 ## Debugging
 

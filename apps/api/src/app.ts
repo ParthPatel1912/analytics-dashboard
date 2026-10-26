@@ -25,12 +25,10 @@ export function buildApp(
   app.setErrorHandler((err: any, _req, reply) => {
     const code = err instanceof z.ZodError ? 422 : err.statusCode || 500;
     if (code >= 500) app.log.error(err);
-    reply
-      .code(code)
-      .send({
-        error: code >= 500 ? 'internal_error' : err.message,
-        ...(err instanceof z.ZodError ? { details: err.issues } : {}),
-      });
+    reply.code(code).send({
+      error: code >= 500 ? 'internal_error' : err.message,
+      ...(err instanceof z.ZodError ? { details: err.issues } : {}),
+    });
   });
   app.addHook('onRequest', async (req, reply) => {
     const origin = req.headers.origin;
@@ -92,9 +90,10 @@ export function buildApp(
     const parsed = z.object({ events: z.array(z.unknown()).min(1).max(50) }).safeParse(body);
     if (!parsed.success)
       return reply.code(422).send({ error: 'events must contain 1 to 50 events' });
-    return reply
-      .code(202)
-      .send(await ingest(db, project.id, parsed.data.events, token ? 'server' : 'browser'));
+    const result = await ingest(db, project.id, parsed.data.events, token ? 'server' : 'browser');
+    if (!result.accepted && !result.duplicates && result.rejected.length)
+      return reply.code(422).send({ error: 'no_valid_events', ...result });
+    return reply.code(202).send(result);
   });
   restaurantRoutes(app, db, options.transport);
   statsRoutes(app, db);
