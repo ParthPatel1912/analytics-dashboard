@@ -7,6 +7,7 @@ import { hashKey, parseJson } from './seed.js';
 import { ingest } from './ingestion.js';
 import { restaurantRoutes } from './restaurant.js';
 import type { EventTransport } from '../../../packages/sdk-node/src/index.js';
+import { statsRoutes } from './stats.js';
 export const safeEqual = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 export function buildApp(db: Knex, options: { rateLimit?: number; logger?: boolean; transport?: EventTransport } = {}) {
   const app = Fastify({ bodyLimit: 256 * 1024, logger: options.logger ?? false, trustProxy: false });
@@ -46,5 +47,6 @@ export function buildApp(db: Knex, options: { rateLimit?: number; logger?: boole
     return reply.code(202).send(await ingest(db, project.id, parsed.data.events, token ? 'server' : 'browser'));
   });
   restaurantRoutes(app, db, options.transport);
+  statsRoutes(app, db);
   return app;
 }
