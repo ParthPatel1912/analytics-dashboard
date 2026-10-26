@@ -40,6 +40,37 @@ it('retains opt-out after reload when localStorage can be read but writes are bl
   await reloaded.flush();
   expect(fetch).not.toHaveBeenCalled();
 });
+it('retains opt-out and reset when cookie writes fail but an older cookie stays readable', async () => {
+  const first = create();
+  first.optIn();
+  first.identify('old-user');
+  const old = first.getIdentity()!;
+  first.shutdown();
+  const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!;
+  Object.defineProperty(document, 'cookie', {
+    configurable: true,
+    get: () => descriptor.get!.call(document),
+    set: () => {
+      throw new Error('cookie writes blocked');
+    },
+  });
+  try {
+    const current = create();
+    current.reset();
+    expect(current.getIdentity()!.anonymous_id).not.toBe(old.anonymous_id);
+    expect(current.getIdentity()!.user_id).toBeNull();
+    current.optOut();
+    current.shutdown();
+    const reloaded = create();
+    expect(reloaded.getIdentity()).toBeNull();
+    reloaded.optIn();
+    reloaded.track('consented_again');
+    await reloaded.flush();
+    expect(fetch).toHaveBeenCalled();
+  } finally {
+    delete (document as any).cookie;
+  }
+});
 it('does not recreate retry timers after shutdown when an in-flight request fails', async () => {
   let reject!: (reason: Error) => void;
   vi.mocked(fetch).mockImplementation(

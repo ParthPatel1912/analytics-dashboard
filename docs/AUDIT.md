@@ -1,13 +1,13 @@
 # Analytics audit
 
-## Resume status — 26 October 2026
+## Resume status — complete
 
-- Completed and committed: phases 1–6, through `5eb1c57`. Existing unit/regression, live E2E, mutation, SQLite EXPLAIN and PostgreSQL runtime evidence is retained below.
-- Partial: phase 7. Uncommitted Playwright configuration, five browser tests, a live seed helper and its development dependency were recovered. The previous browser run failed 5/5: two cold-dev-server readiness/navigation timeouts, stale KPIs after API failure, checkout waiting for analytics, and corrupt saved cart data.
-- Not started: phase 8 documentation reconciliation and final clean-state verification.
-- Inspection found no unrecovered mutation: unique index, conflict-ignore, API-key/Origin checks, visitor identity, zero filling, post-commit scheduling, SDK retry and beacon are intact. No production source diff or half-edited source was present.
-- Resume baseline: `npm run typecheck` exit 0; `npm run build` exit 0. `npm run test:report` initially reported API 30 passed / 1 timed out, browser/React SDK 18 passed, Node SDK 4 passed. The timed-out auth test file was immediately rerun unchanged: 6/6 passed in 668 ms, confirming a transient readiness/timing failure rather than a reproduced auth defect. Full-suite confirmation follows the phase-7 fixes.
-- Continue from phase 7; do not redo completed phases. Browser tests will warm development routes before assertions, retaining all assertions and the strict stalled-analytics deadline.
+- All eight audit phases are now complete. Phase 7 was recovered and finished; phase 8 reconciled documentation and completed the final destructive clean-state run.
+- No unfinished mutation edits remain. The final run detected all eight mutations, verified original source hashes after restoration and immediately passed all 54 unit/regression tests.
+- Final package counts: API 31, browser/React SDK 19, Node SDK 4. Package checks 4/4, Playwright 5/5, executable API examples 26/26, live/failure E2E and native PostgreSQL 18.4 all pass.
+- Exact commands/exit codes are in AUDIT-FINAL.json; final results and definition-of-done checklist are in VERIFICATION.md. Developer data was recreated from the 14-day seed. No live test servers remain running.
+- The only external verification gap is MySQL runtime/collation; no MySQL service was available. SQLite and PostgreSQL were exercised. Production limitations (static dashboard token, no identity back-merge, best-effort post-response delivery) remain explicit.
+- Resume history: phases 1–6 were committed at 5eb1c57, phase 7 tests were unfinished. The first resume baseline had one transient five-second auth-test timeout; unchanged focused recheck passed, and every subsequent full run including the clean run passed without relaxing tests.
 
 Started 26 October 2026. This file records commands actually run, findings, regression evidence and remaining verification limits. Original checkout: `0411409`. No existing tests will be skipped or weakened.
 
@@ -36,12 +36,14 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 | A19 | major | Dashboard retained old KPIs/feed after a failed query, implying stale data belonged to the current filter. | Clear stale result data when its request fails. | Stopped-API regression saw four stale cards instead of none before fix. | Fixed |
 | A20 | major | Checkout awaited analytics delivery, letting a stalled analytics request block ordering. | Start best-effort analytics delivery without awaiting it; forward identity synchronously. | Hung-analytics browser checkout missed its unchanged 3-second deadline before fix. | Fixed |
 | A21 | minor | Saved-cart restoration accepted incomplete items and invalid quantities, rendering NaN totals. | Validate restored item fields, cents and quantity bounds before display. | Corrupt-storage browser test failed before fix. | Fixed |
+| A22 | major | Always preferring the cookie fixed quota-full localStorage but resurrected old identity/consent when cookie writes failed instead. | Revision mirrored identity/consent values and choose the latest readable value, with legacy format support. | Reverse-storage regression failed before; all five storage failure tests and the full 54-test suite pass after. | Fixed |
+| A23 | minor | Verification docs still reported the original bundle size/test count and unverified Postgres after the audit changed them. | Reconcile docs and execute their API examples; add measured-size documentation check. | Doc-size check failed before, all four package checks pass after; 26 runnable API requests pass. | Fixed |
 
 ## Phase 1 — clean-state setup
 
 - Read the README before running setup. Node here is 22.17.0, npm 10.9.2.
 - Verified absolute cleanup targets are inside `D:\demo\analyticDashboard`; only generated dependencies, build outputs, `.env`, and local SQLite data will be removed.
-- No `docker`, `psql` or `mysql` executable was returned by `Get-Command`. Alternative database runtime verification needs further investigation; no claim of a successful service test yet.
+- Initial discovery returned no docker/psql/mysql executable. Phase 6 later supplied a temporary native PostgreSQL cluster and verified it; MySQL remains unavailable.
 
 ## Phase status
 
@@ -52,7 +54,7 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 5. Failure modes: passed.
 6. Risky-code review and EXPLAIN: passed (SQLite + PostgreSQL runtime; MySQL compilation only).
 7. Dashboard/browser checks: passed (5 Playwright tests).
-8. Documentation + final clean verification: pending.
+8. Documentation + final clean verification: passed.
 
 ### Phase 1 evidence
 
@@ -127,3 +129,13 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 - Screenshot visually inspected: docs/audit-dashboard.png.
 - npm run test:report: API 31/31, browser/React SDK 18/18, Node SDK 4/4; full suite 53/53. The earlier resume timeout did not recur.
 - npm run typecheck and npm run build -w @app/web: exit 0.
+
+## Phase 8 — truthful documentation and final clean run
+
+- Corrected stale Node/runtime, Postgres, test-count and gzip claims. Added runnable docs/api-examples.mjs (26 real requests), exact proxy paths, optional QA environment variables, test prerequisites and command scopes. Kept all production/demo limitations explicit.
+- Reverse read-only-cookie test reproduced stale identity/consent; revisioned mirrored storage now handles either blocked writer and legacy values. Before: 1/5 storage failure tests failed; after: 5/5 passed. The full suite is now 54/54.
+- Documentation-size contract failed before (old verification size), passed after; all four built-package checks pass.
+- Executed ./scripts/verify-clean.ps1 from this checkout. It verified absolute cleanup bounds, removed generated dependencies/env/data/build/scratch files, installed with npm ci, copied the example env, migrated, seeded, built and typechecked. All commands in docs/AUDIT-FINAL.json exited 0.
+- Final full test counts: API 31, browser/React SDK 19, Node SDK 4. All eight mutations killed; original source hashes restored, then full 54/54 suite green immediately afterward. Four package contracts, nine live-E2E groups, failure E2E, 26 API examples, five Playwright tests, SQLite EXPLAIN, native PostgreSQL 18.4, gzip size and npm audit all passed.
+- Final browser run: 5/5 in 18.2s, including unchanged strict stalled-analytics deadline. No normal-operation console/page/hydration errors. Intentional stopped-API responses are expected errors and tested separately.
+- Final size: 2,910 bytes gzip / 2.84 KiB. npm audit: 0 vulnerabilities. No lint config exists. MySQL runtime remains unverified; a disposable MySQL service and equivalent collation-aware contract are needed. No unresolved reproduced application bug remains.

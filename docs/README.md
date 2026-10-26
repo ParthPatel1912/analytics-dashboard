@@ -7,7 +7,7 @@ The [root README](../README.md) is the canonical quick start. Run every command 
 3. `npm run migrate` runs Knex migrations; `npm run setup` also seeds the project and ten menu items. Both are safe to repeat.
 4. `npm run seed:demo` also inserts fourteen UTC calendar days of realistic analytics, with deterministic UUIDs and funnel drop-off. Repeating on the same dates does not duplicate fixtures. Real demo restaurant orders are stored separately; the generated analytics orders are synthetic events only.
 5. `npm run dev` builds SDKs and starts API :4000 + web :3000, with watch mode.
-6. `npm test` checks everything, or `npm run test:api` / `npm run test:sdk`. `npm run smoke` exercises ingestion -> order commit -> aggregate stats in an isolated in-memory DB, with no running services required.
+6. `npm test` runs unit/regression tests, or use `npm run test:api` / `npm run test:sdk`. `npm run smoke` uses an isolated in-memory DB. `npm run test:e2e`, `npm run test:failures`, `npm run test:ui` and `npm run test:docs` start and stop actual temporary services. Run these serially; web tests share Next's development output directory.
 
 ## Custom ports / origins
 
@@ -17,7 +17,18 @@ Next loads root `.env` through `next.config.ts`; only the public write key and b
 
 ## PostgreSQL / MySQL
 
-Create an empty UTF-8 database and put `DATABASE_URL=postgres://...` or `DATABASE_URL=mysql://...` in root `.env`. Then run `npm run setup`, `npm run seed:demo`, and `npm run dev`. Drivers are already dependencies. URL scheme is validated. There is no automatic copying of SQLite data. Knex migrations use native JSON columns and foreign keys; event timestamps are canonical UTC strings for portable comparisons. Date arithmetic lives in `apps/api/src/buckets.ts`. CI should provision actual DB services before switching a deployment; local automated tests use SQLite only.
+Create an empty UTF-8 database and put `DATABASE_URL=postgres://...` or `DATABASE_URL=mysql://...` in root `.env`. Then run `npm run setup`, `npm run seed:demo`, and `npm run dev`. Drivers are already dependencies. There is no automatic SQLite data transfer. Date arithmetic is isolated in `apps/api/src/buckets.ts`.
+
+The audit ran native PostgreSQL 18.4 migrations, seed, concurrent idempotency, all queries, identity/timezone/zero filling, checkout and failure isolation. Set `TEST_DATABASE_URL` to your **expendable** Postgres database and run `npm run test:postgres`; only a generated `audit_*` schema is created/dropped. MySQL SQL compilation is checked, but real runtime/collation testing is still required.
+
+For a temporary Windows Postgres fixture without a system service:
+
+```sh
+npm install --prefix .audit/postgres-runtime --no-save --package-lock=false --ignore-scripts @embedded-postgres/windows-x64@18.4.0-beta.17
+npm run test:postgres:local
+```
+
+The downloaded binaries stay under the ignored audit directory, outside application dependencies. The harness starts a loopback-only cluster and stops/removes its generated data afterward. Other platforms can use `TEST_DATABASE_URL` with a local/container database.
 
 ## Tracking and privacy
 
@@ -32,4 +43,4 @@ The [root README](../README.md#five-line-browser-integration) shows browser and 
 - API unavailable: inspect both dev process logs and `/health`; check `API_URL`.
 - DNT/opt-out: browser events are intentionally absent. Server orders remain independently tracked.
 - Native SQLite install error: use Node 22 LTS with a prebuilt binary, or install the native toolchain required by better-sqlite3.
-- All tests run against fresh in-memory databases and do not modify your local analytics file.
+- Unit tests use in-memory databases; live/Playwright tests use temporary SQLite files and Postgres tests use a generated schema. The manually executed documentation example creates demo events/orders in your targeted API; its automated test runs in isolation.

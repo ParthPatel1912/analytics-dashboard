@@ -1,0 +1,124 @@
+{
+  "node": "v22.17.0",
+  "checks": [
+    {
+      "name": "clean",
+      "command": "Remove verified generated targets; preserve tracked sources/Git",
+      "exitCode": 0
+    },
+    {
+      "name": "install",
+      "seconds": 39.46,
+      "command": "npm ci",
+      "exitCode": 0
+    },
+    {
+      "name": "environment",
+      "command": "Copy-Item .env.example .env",
+      "exitCode": 0
+    },
+    {
+      "name": "migrate",
+      "seconds": 0.93,
+      "command": "npm run migrate",
+      "exitCode": 0
+    },
+    {
+      "name": "seed",
+      "seconds": 0.92,
+      "command": "npm run seed:demo",
+      "exitCode": 0
+    },
+    {
+      "name": "build",
+      "seconds": 17.25,
+      "command": "npm run build",
+      "exitCode": 0
+    },
+    {
+      "name": "typecheck",
+      "seconds": 7.86,
+      "command": "npm run typecheck",
+      "exitCode": 0
+    },
+    {
+      "name": "unit-before-mutations",
+      "seconds": 8.75,
+      "command": "npm run test:report",
+      "exitCode": 0
+    },
+    {
+      "name": "mutations",
+      "seconds": 14.37,
+      "command": "npm run test:mutations",
+      "exitCode": 0
+    },
+    {
+      "name": "unit-after-mutations",
+      "seconds": 8.48,
+      "command": "npm run test:report",
+      "exitCode": 0
+    },
+    {
+      "name": "package-contracts",
+      "seconds": 5.61,
+      "command": "npm run test:packages",
+      "exitCode": 0
+    },
+    {
+      "name": "e2e",
+      "seconds": 13.33,
+      "command": "npm run test:e2e",
+      "exitCode": 0
+    },
+    {
+      "name": "failure-e2e",
+      "seconds": 6.2,
+      "command": "npm run test:failures",
+      "exitCode": 0
+    },
+    {
+      "name": "docs-e2e",
+      "seconds": 4.75,
+      "command": "npm run test:docs",
+      "exitCode": 0
+    },
+    {
+      "name": "browser",
+      "seconds": 24.21,
+      "command": "npm run test:ui",
+      "exitCode": 0
+    },
+    {
+      "name": "query-plans",
+      "seconds": 0.94,
+      "command": "npm run explain",
+      "exitCode": 0
+    },
+    {
+      "name": "postgres-fixture",
+      "seconds": 3.23,
+      "command": "npm install --prefix .audit/postgres-runtime --no-save --package-lock=false --ignore-scripts @embedded-postgres/windows-x64@18.4.0-beta.17",
+      "exitCode": 0
+    },
+    {
+      "name": "postgres",
+      "seconds": 12.96,
+      "command": "npm run test:postgres:local",
+      "exitCode": 0
+    },
+    {
+      "name": "bundle-size",
+      "seconds": 0.44,
+      "command": "npm run size",
+      "exitCode": 0
+    },
+    {
+      "name": "dependency-audit",
+      "seconds": 1.73,
+      "command": "npm audit",
+      "exitCode": 0
+    }
+  ],
+  "status": "passed"
+}

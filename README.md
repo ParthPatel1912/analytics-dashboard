@@ -24,16 +24,27 @@ Browse the menu, add an item, open your bag, and place a demo order with fake na
 ## Verification
 
 ```sh
-npm test             # all API + browser + Node SDK tests, including the E2E smoke
+npm test             # API + browser/React + Node SDK unit/regression tests
 npm run test:api     # backend only (Vitest + Supertest)
 npm run test:sdk     # SDKs only (browser tests use jsdom)
 npm run smoke        # isolated in-memory page_view -> add_to_cart -> checkout -> stats
 npm run typecheck
 npm run build        # SDK packages, backend typecheck, production Next.js build
 npm run size         # after build: browser IIFE gzip size; fails at 5 KiB
+npm run test:e2e     # real API + Next processes, ingestion/auth/checkout/stats/throttling
+npm run test:failures # actual API stop/restart, persisted delivery, concurrent retries
+npm run test:ui      # five Playwright dashboard/checkout/failure-state tests
+npm run test:docs    # execute the documented API requests against isolated services
+npm run test:packages # build/exports/declarations/SSR/ignored files/documented size
+npm run test:mutations # eight temporary mutations; run serially without dev servers
+npm run explain     # recorded SQLite plans and bound alternative-dialect SQL
 ```
 
-Browser SDK IIFE measured **2,754 bytes gzip (2.69 KiB)** after the audit fixes. Re-run `size` for the current measurement. React is a separate optional peer/entry and is excluded from that bundle. Start the built web app with `npm start -w @app/web`, and the API with `npx tsx apps/api/src/index.ts` under a process manager (without watch mode).
+Browser SDK IIFE measured **2,910 bytes gzip (2.84 KiB)** after the audit fixes. Re-run `size` for the current measurement. React is a separate optional peer/entry and is excluded from that bundle. Start the built web app with `npm start -w @app/web`, and the API with `npx tsx apps/api/src/index.ts` under a process manager (without watch mode).
+
+Playwright uses installed Edge on Windows. On other platforms install its browser with `npx playwright install chromium`; `PLAYWRIGHT_CHANNEL` can select another installed supported browser. Live tests start their own ephemeral servers and isolated databases/credentials. They need no manually running dev server and do not alter your developer data. No lint configuration exists; the commands above are the configured checks.
+
+On Windows, `./scripts/verify-clean.ps1` reproduces the complete audit from a clean demo checkout. It deliberately deletes generated dependencies/build outputs, `.env`, local SQLite demo data and audit scratch files, then reinstalls and verifies everything serially. Results are saved incrementally in `docs/AUDIT-FINAL.json`.
 
 ## Five-line browser integration
 
@@ -70,10 +81,14 @@ See [.env.example](.env.example). Its credentials are intentionally public and f
 | `PORT` | `4000`, API listen port |
 | `API_URL` | `http://127.0.0.1:4000`, Next server proxy target |
 | `NEXT_PUBLIC_ANALYTICS_ENDPOINT` | Browser-reachable ingestion URL |
-| `SQLITE_FILE` | `./analytics.sqlite`, root-local DB when commands run from root |
+| `SQLITE_FILE` | `./analytics.sqlite`, resolved relative to the repository root |
 | `DATABASE_URL` | Optional `postgres://...` or `mysql://...`; overrides SQLite |
 | `RATE_LIMIT` | `120` requests/min per valid public/secret project credential |
 | `BLOCK_BOTS` | `false`; simple optional UA rejection |
+| `TEST_DATABASE_URL` | Optional expendable Postgres database for `npm run test:postgres` |
+| `PLAYWRIGHT_CHANNEL` | Optional UI-test browser channel; defaults to `msedge` on Windows |
+| `API_EXAMPLE_BASE` | Optional base URL for executable API examples; otherwise `API_URL` |
+| `NEXT_TELEMETRY_DISABLED` | Optional Next telemetry preference; live harness sets `1` |
 
 No secret is sent to the browser. The local dashboard's Next proxy is deliberately open to whoever can visit this local app; the token protects direct query API calls only. **Add real web authentication before hosting publicly.** API binds loopback. Changing environment keys does not rewrite an existing project's stored keys/origins; use a fresh database for a new local project or perform an explicit credential migration.
 
@@ -87,4 +102,4 @@ packages/sdk-node/   ServerTracker + transport interface + HTTP transport
 docs/                setup, contract, assumptions, tradeoffs
 ```
 
-Read [API examples](docs/API.md), [engineering decisions](docs/DECISIONS.md), and [extended setup](docs/README.md). Postgres/MySQL code paths are included but not service-tested in this workspace. Browser QA verified the populated dashboard and the complete menu → cart → checkout → receipt → live feed flow. See [verification results](docs/VERIFICATION.md) and the [dashboard screenshot](docs/dashboard.png).
+Read [runnable API examples](docs/API.md), [engineering decisions](docs/DECISIONS.md), [extended setup](docs/README.md), and the [audit](docs/AUDIT.md). SQLite and PostgreSQL 18.4 runtime contracts were tested. MySQL SQL compiles; MySQL runtime/collation behavior remains unverified. Browser tests verify checkout, live events, filters and failure states. See [verification results](docs/VERIFICATION.md) and the [audited screenshot](docs/audit-dashboard.png).

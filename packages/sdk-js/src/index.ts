@@ -82,6 +82,7 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
   let request: AbortController | undefined,
     requestTimeout: ReturnType<typeof setTimeout> | undefined;
   const memory: Record<string, string> = {};
+  let revision = 0;
   const log = (e: unknown) => {
     if (options.debug)
       try {
@@ -98,20 +99,37 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
   };
   const read = (key: string): string | null => {
     if (!browser) return null;
-    // Identity/consent cookies are also updated when a quota-full localStorage
-    // remains readable. Prefer that newer fallback over its stale stored value.
-    if (key !== 'queue') {
-      const cookie = safe(() => {
-        const value = document.cookie.split('; ').find((c) => c.startsWith(prefix + key + '='));
-        return value ? decodeURIComponent(value.slice(prefix.length + key.length + 1)) : null;
-      }, null);
-      if (cookie !== null) return cookie;
-    }
     const local = safe(() => localStorage.getItem(prefix + key), null);
-    if (local !== null) return local;
-    return memory[key] || null;
+    if (key === 'queue') return local ?? memory[key] ?? null;
+    const cookie = safe(() => {
+      const value = document.cookie.split('; ').find((c) => c.startsWith(prefix + key + '='));
+      return value ? decodeURIComponent(value.slice(prefix.length + key.length + 1)) : null;
+    }, null);
+    let selected: { value: string | null; revision: number } = { value: null, revision: -1 };
+    for (const raw of [local, cookie, memory[key]]) {
+      if (raw == null) continue;
+      const record = safe(() => JSON.parse(raw), null);
+      const candidate =
+        record?.__ta === 1 &&
+        typeof record.value === 'string' &&
+        Number.isSafeInteger(record.revision)
+          ? (record as { value: string; revision: number })
+          : { value: raw, revision: 0 };
+      revision = Math.max(revision, candidate.revision);
+      if (
+        candidate.revision > selected.revision ||
+        (key === 'optout' && candidate.revision === selected.revision && candidate.value === '1')
+      )
+        selected = candidate;
+    }
+    return selected.value;
   };
   const write = (key: string, value: string, cookie = false) => {
+    if (key !== 'queue') {
+      read(key);
+      revision = Math.max(revision, Date.now()) + 1;
+      value = JSON.stringify({ __ta: 1, value, revision });
+    }
     memory[key] = value;
     const saved = safe(() => {
       localStorage.setItem(prefix + key, value);

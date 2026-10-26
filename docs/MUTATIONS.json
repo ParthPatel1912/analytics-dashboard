@@ -6,7 +6,7 @@
       "mutation": "idempotency-storage",
       "status": "killed",
       "failedTests": 2,
-      "totalTests": 23
+      "totalTests": 31
     },
     {
       "mutation": "api-key",
@@ -41,7 +41,7 @@
     {
       "mutation": "sdk-retry",
       "status": "killed",
-      "failedTests": 2,
+      "failedTests": 1,
       "totalTests": 12
     },
     {

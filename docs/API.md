@@ -1,6 +1,16 @@
 # HTTP API
 
-Local base: `http://localhost:4000`. All responses are JSON. Ingestion body limit is 256 KiB including envelope. Examples use documented **local-demo** credentials; substitute environment values in real deployments.
+Local base: `http://localhost:4000`. Non-empty API responses are JSON; successful OPTIONS returns an empty 204. Ingestion body limit is 256 KiB including envelope. Examples use documented **local-demo** credentials; substitute environment values in real deployments.
+
+## Runnable examples
+
+With the app running, execute **every endpoint example** using:
+
+```sh
+node --env-file=.env docs/api-examples.mjs
+```
+
+The [executable example](api-examples.mjs) creates fresh UUIDs/current UTC timestamps, reads keys from `.env`, creates one demo order, carries its real ID into the receipt request, and asserts the actual status/response for all endpoints and the 400/401/403/404/413/415/422 examples. It prints no credentials. `npm run test:docs` runs that exact file against isolated temporary API/web processes. The JSON below illustrates response shapes; counts/UUIDs vary with your data, and individual validation wording can change with Zod. Use the executable file instead of copying a dated timestamp or nonexistent receipt UUID. The 429 / Retry-After example is exercised by `npm run test:e2e`, which deliberately exceeds the 120/minute limit in its isolated project.
 
 ## Ingest a batch
 
@@ -61,6 +71,7 @@ Preflight: 204 with reflected approved Origin, `Vary: Origin`, allowed methods/h
 | 401 | `{ "error": "invalid_key" }`, missing/bad credential |
 | 403 | `{ "error": "origin_not_allowed" }` or `bot_blocked` |
 | 413 | `{ "error": "Request body is too large" }` |
+| 415 | `{ "error": "Unsupported Media Type: application/xml" }`, unsupported content type |
 | 422 | `{ "error": "events must contain 1 to 50 events" }` |
 | 429 | `{ "error": "rate_limited" }`, `Retry-After: <seconds>` |
 | 500 | `{ "error": "internal_error" }`; no internal stack returned |
@@ -182,4 +193,4 @@ After commit and response, server emits order_created with `{ order_id, total, i
 
 ## Next.js proxies
 
-`/api/restaurant/menu`, `/api/restaurant/orders`, `/api/restaurant/orders/:id` forward only allowlisted restaurant paths and identity headers. `/api/stats/overview`, `/timeseries`, `/top-pages`, `/events`, `/recent` forward allowlisted stats paths with a server-held bearer token. Upstream connection failures return 502 `{ "error": "..." }`. They are deliberately accessible without login in this local demo. Add authentication and request-rate/body limits to these proxies before deployment.
+`/api/restaurant/menu`, `/api/restaurant/orders`, `/api/restaurant/orders/:id` forward only allowlisted restaurant paths and identity headers. `/api/stats/overview`, `/api/stats/timeseries`, `/api/stats/top-pages`, `/api/stats/events`, `/api/stats/recent` forward allowlisted stats paths with a server-held bearer token. Upstream connection failures return 502 `{ "error": "..." }`. They are deliberately accessible without login in this local demo. Add authentication and request-rate/body limits to these proxies before deployment.

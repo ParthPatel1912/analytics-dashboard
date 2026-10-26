@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { gzipSync } from 'node:zlib';
 
 test('built React entry preserves the Next.js client boundary in ESM and CJS', () => {
   for (const extension of ['js', 'cjs']) {
@@ -46,4 +47,14 @@ test('built SDK exports and declarations exist, and core imports safely without 
     'packages/sdk-node/dist/index.d.ts',
   ])
     assert.ok(existsSync(path), path);
+});
+test('README and verification document report the measured browser gzip size', () => {
+  const size = gzipSync(
+    readFileSync('packages/sdk-js/dist/browser/index.global.js'),
+  ).length.toLocaleString('en-US');
+  for (const path of ['README.md', 'docs/VERIFICATION.md'])
+    assert.ok(
+      readFileSync(path, 'utf8').includes(size + ' bytes'),
+      `${path} must report ${size} bytes`,
+    );
 });
