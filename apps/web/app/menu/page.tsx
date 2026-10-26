@@ -1,2 +1,4 @@
 import { Menu } from '../../components/restaurant';
-export default function Page() { return <Menu />; }
+export default function Page() {
+  return <Menu />;
+}
