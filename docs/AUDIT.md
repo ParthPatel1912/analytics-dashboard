@@ -23,7 +23,7 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 1. Clean-state setup: passed.
 2. Static/build: passed.
 3. Test coverage + mutation checks: passed.
-4. Live end-to-end automation: pending.
+4. Live end-to-end automation: passed.
 5. Failure modes: pending.
 6. Risky-code review and EXPLAIN: pending.
 7. Dashboard/browser checks: pending.
@@ -62,4 +62,11 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 - The first attempted baseline overlapped deliberate mutations and is invalid. It was not counted as a product failure; all subsequent suite/mutation runs are serial.
 - Initial added tests exposed a leaked accessor mock (A04); 37/39 passed before fixture cleanup, 39/39 after. Concurrent Supertest uses one explicitly listening server, avoiding artificial MaxListeners warnings.
 - No .skip, .only or .todo tests. The smoke test delegates to a helper containing real node:assert checks. Tests have meaningful assertions; no existing assertion was removed.
+
+
+## Phase 4 — real process E2E
+
+- npm run test:e2e: exit 0, nine grouped checks against actual Fastify and Next dev processes on ephemeral loopback ports, with isolated SQLite and random per-run credentials.
+- Verified: 202 acceptance, retry duplicate counts + unchanged total, partial rejection index/reason, 401/403/422/413 responses, OPTIONS, body/query beacon keys, full browser-shaped event/order flow, authoritative server total despite tampered price, forwarded anonymous/session identity, no event for invalid order, 120/min throttle and Retry-After, dashboard proxy, no uncaught/unhandled errors or credential leakage in logs.
+- The permanent command builds SDKs before launch and tears down its own child process trees and temporary database in finally. It does not depend on a manually running server or change the developer database.
 
