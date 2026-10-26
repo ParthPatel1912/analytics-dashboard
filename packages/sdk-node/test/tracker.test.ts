@@ -1,7 +1,7 @@
 import { it, expect, vi } from 'vitest';
-import { ServerTracker, HttpTransport } from '../src/index.js';
+import { ServerTracker, HttpTransport, type ServerEvent } from '../src/index.js';
 it('builds stitched envelopes and never propagates transport or logger failures', async () => {
-  const send = vi.fn(async () => {}); const tracker = new ServerTracker({ send });
+  const send = vi.fn(async (_events: ServerEvent[]) => {}); const tracker = new ServerTracker({ send });
   await tracker.track('order_created', { total: 123 }, 'user', 'anon', 'session');
   expect(send.mock.calls[0][0][0]).toMatchObject({ source: 'server', user_id: 'user', anonymous_id: 'anon', session_id: 'session', properties: { total: 123 } });
   const bad = new ServerTracker({ send: async () => { throw new Error('offline'); } }, () => { throw new Error('logger failed'); });

@@ -48,7 +48,10 @@ export function statsRoutes(app: FastifyInstance, db: Knex) {
     return Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value)]));
   });
   endpoint('/api/v1/stats/timeseries', async (id, range, q) => timeseries(db, id, range, z.enum(['day', 'hour']).default('day').parse(q.interval), z.enum(['page_views', 'events', 'visitors']).default('page_views').parse(q.metric), q.event ? eventName.parse(q.event) : undefined));
-  endpoint('/api/v1/stats/top-pages', async (id, range, q) => ({ pages: (await base(db, id, range).where({ name: 'page_view' }).whereNotNull('path').select('path').count({ views: '*' }).select(db.raw(`${visitor} AS unique_visitors`)).groupBy('path').orderBy('views', 'desc').orderBy('path').limit(z.coerce.number().int().min(1).max(100).default(10).parse(q.limit))).map(r => ({ ...r, views: Number(r.views), unique_visitors: Number(r.unique_visitors) })) }));
+  endpoint('/api/v1/stats/top-pages', async (id, range, q) => {
+    const rows = await base(db, id, range).where({ name: 'page_view' }).whereNotNull('path').select('path').count({ views: '*' }).select(db.raw(`${visitor} AS unique_visitors`)).groupBy('path').orderBy('views', 'desc').orderBy('path').limit(z.coerce.number().int().min(1).max(100).default(10).parse(q.limit)) as unknown as { path: string; views: number | string; unique_visitors: number | string }[];
+    return { pages: rows.map(r => ({ ...r, views: Number(r.views), unique_visitors: Number(r.unique_visitors) })) };
+  });
   endpoint('/api/v1/stats/events', async (id, range, q) => ({ events: (await base(db, id, range).select('name').count({ count: '*' }).groupBy('name').orderBy('count', 'desc').orderBy('name')).map(r => ({ ...r, count: Number(r.count) })), trend: await timeseries(db, id, range, 'day', 'events', eventName.default('order_created').parse(q.event)) }));
   endpoint('/api/v1/events/recent', async (id, range, q) => ({ events: (await base(db, id, range).orderBy('occurred_at', 'desc').orderBy('id', 'desc').limit(z.coerce.number().int().min(1).max(100).default(50).parse(q.limit))).map(e => ({ ...e, properties: parseJson(e.properties), context: parseJson(e.context) })) }));
 }

@@ -25,16 +25,14 @@ it('limits payload, batch, property size/depth and timestamps', async () => {
   f = await fixture();
   expect((await send(Array.from({ length: 51 }, () => event()))).status).toBe(422);
   expect((await send([event({ properties: { huge: 'x'.repeat(270000) } })])).status).toBe(413);
-  const result = await send([event({ timestamp: new Date(Date.now() + 86400001).toISOString() }), event({ timestamp: new Date(Date.now() - 8 * 86400000).toISOString() }), event({ properties: { huge: 'x'.repeat(8192) } }), event({ properties: { a: { b: { c: { d: { e: { f: { g: true } } } } } } } }), event({ properties: { safe: true } })]);
-  // Use 25h to avoid timing races on the exact future boundary.
-  expect(result.body.rejected.length).toBeGreaterThanOrEqual(3);
+  const result = await send([event({ timestamp: new Date(Date.now() + 25 * 3600000).toISOString() }), event({ timestamp: new Date(Date.now() - 8 * 86400000).toISOString() }), event({ properties: { huge: 'x'.repeat(8192) } }), event({ properties: { a: { b: { c: { d: { e: { f: { g: true } } } } } } } }), event({ properties: { safe: true } })]);
+  expect(result.body.rejected).toHaveLength(4); expect(result.body.accepted).toBe(1);
 });
 it('rate limits with Retry-After and returns beacon preflight', async () => {
   f = await fixture(1); await send([event()]);
   const res = await send([event()]); expect(res.status).toBe(429); expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
   const preflight = await request(f.app.server).options('/api/v1/events/batch').set('Origin', config.origin).set('Access-Control-Request-Method', 'POST');
   expect(preflight.status).toBe(204); expect(preflight.headers['access-control-allow-origin']).toBe(config.origin);
-  f = f;
 });
 it('accepts JSON beacon bodies with a body write key', async () => {
   f = await fixture(); const res = await request(f.app.server).post('/api/v1/events/batch').set('Origin', config.origin).send({ write_key: config.publicKey, events: [event()] });
