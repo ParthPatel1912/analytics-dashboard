@@ -26,11 +26,13 @@
     "test:failures": "tsx scripts/failure-e2e.ts",
     "test:postgres": "tsx scripts/database-e2e.ts",
     "test:postgres:local": "node scripts/portable-postgres.mjs",
+    "test:ui": "npm run build:sdks && playwright test",
     "explain": "tsx scripts/explain.ts",
     "typecheck": "tsc --noEmit -p apps/api && tsc --noEmit -p packages/sdk-js && tsc --noEmit -p packages/sdk-node && tsc --noEmit -p apps/web && tsc --noEmit -p scripts",
     "size": "node scripts/size.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

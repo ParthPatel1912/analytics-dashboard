@@ -181,7 +181,7 @@ export function Checkout() {
           .map((n) => n.toString(16).padStart(2, '0'))
           .join('');
       analytics?.identify(userId);
-      await analytics?.flush();
+      void analytics?.flush();
       const id = analytics?.getIdentity();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (id) {

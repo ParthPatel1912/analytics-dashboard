@@ -1,5 +1,14 @@
 # Analytics audit
 
+## Resume status — 26 October 2026
+
+- Completed and committed: phases 1–6, through `5eb1c57`. Existing unit/regression, live E2E, mutation, SQLite EXPLAIN and PostgreSQL runtime evidence is retained below.
+- Partial: phase 7. Uncommitted Playwright configuration, five browser tests, a live seed helper and its development dependency were recovered. The previous browser run failed 5/5: two cold-dev-server readiness/navigation timeouts, stale KPIs after API failure, checkout waiting for analytics, and corrupt saved cart data.
+- Not started: phase 8 documentation reconciliation and final clean-state verification.
+- Inspection found no unrecovered mutation: unique index, conflict-ignore, API-key/Origin checks, visitor identity, zero filling, post-commit scheduling, SDK retry and beacon are intact. No production source diff or half-edited source was present.
+- Resume baseline: `npm run typecheck` exit 0; `npm run build` exit 0. `npm run test:report` initially reported API 30 passed / 1 timed out, browser/React SDK 18 passed, Node SDK 4 passed. The timed-out auth test file was immediately rerun unchanged: 6/6 passed in 668 ms, confirming a transient readiness/timing failure rather than a reproduced auth defect. Full-suite confirmation follows the phase-7 fixes.
+- Continue from phase 7; do not redo completed phases. Browser tests will warm development routes before assertions, retaining all assertions and the strict stalled-analytics deadline.
+
 Started 26 October 2026. This file records commands actually run, findings, regression evidence and remaining verification limits. Original checkout: `0411409`. No existing tests will be skipped or weakened.
 
 ## Findings
@@ -22,6 +31,11 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 | A14 | major | Equivalent uppercase/lowercase event UUIDs could create two rows in SQLite. | Canonicalize validated event UUIDs to lowercase. | Case-variant replay regression failed before, passed after. | Fixed |
 | A15 | minor | Node HTTP transport retried before Retry-After when delay exceeded one minute. | Honor the server deadline, splitting only for platform timer limits. | 120-second fake-clock regression failed before, passed after. | Fixed |
 | A16 | minor | Malformed Node Retry-After produced NaN and an immediate retry. | Ignore non-finite parsed delays and retain exponential delay. | Malformed-header regression failed before, passed after. | Fixed |
+| A17 | minor | Missing favicon generated a browser console 404. | Add native SVG app icon and legacy favicon redirect. | Warmed normal browser checkout failed the unchanged zero-console-errors assertion before fix. | Fixed |
+| A18 | major | Rapid dashboard changes built URLs from stale navigation state and dropped earlier filters. | Merge pending changes until their navigation commits. | Existing filter browser test failed with missing `interval=hour` before fix. | Fixed |
+| A19 | major | Dashboard retained old KPIs/feed after a failed query, implying stale data belonged to the current filter. | Clear stale result data when its request fails. | Stopped-API regression saw four stale cards instead of none before fix. | Fixed |
+| A20 | major | Checkout awaited analytics delivery, letting a stalled analytics request block ordering. | Start best-effort analytics delivery without awaiting it; forward identity synchronously. | Hung-analytics browser checkout missed its unchanged 3-second deadline before fix. | Fixed |
+| A21 | minor | Saved-cart restoration accepted incomplete items and invalid quantities, rendering NaN totals. | Validate restored item fields, cents and quantity bounds before display. | Corrupt-storage browser test failed before fix. | Fixed |
 
 ## Phase 1 — clean-state setup
 
@@ -37,7 +51,7 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 4. Live end-to-end automation: passed.
 5. Failure modes: passed.
 6. Risky-code review and EXPLAIN: passed (SQLite + PostgreSQL runtime; MySQL compilation only).
-7. Dashboard/browser checks: pending.
+7. Dashboard/browser checks: passed (5 Playwright tests).
 8. Documentation + final clean verification: pending.
 
 ### Phase 1 evidence
@@ -103,3 +117,13 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 - SDK fetch timeout and shutdown/consent cleanup tested; methods contain guarded synchronous/async boundaries and no framework/runtime dependency in the browser core. npm run build:sdks, npm run typecheck passed; npm run size measured 2,754 gzip bytes (2.69 KiB), README corrected.
 - MySQL SQL compilation is verified; MySQL runtime/collation behavior still needs a running service and is explicitly not claimed as verified.
 
+
+## Phase 7 — resumed browser verification
+
+- Recovered tests, Playwright dependency and seed helper were completed rather than discarded. No production mutation leftovers existed.
+- Warmed dev routes before assertions; did not remove/relax any assertion or change the 3-second stalled-analytics deadline. Warmed pre-fix run: 0/5 passed, exposing favicon 404, lost URL filter, stale data, analytics-blocked checkout, and corrupt cart.
+- npx playwright test after fixes: 5/5 passed in 19.4 seconds against installed Edge. Normal checkout and dashboard emitted no browser console errors, page errors or hydration warnings. Intentional stopped-API 502 responses were verified separately.
+- Browser checks cover Today/7d/30d/custom presets, URL persistence across refresh, rapid interval/event changes, KPI/page/event/feed agreement with API, line/bar charts, loading/empty/error states, seeded data, raw-name/email exclusion, receipt total and stalled analytics.
+- Screenshot visually inspected: docs/audit-dashboard.png.
+- npm run test:report: API 31/31, browser/React SDK 18/18, Node SDK 4/4; full suite 53/53. The earlier resume timeout did not recur.
+- npm run typecheck and npm run build -w @app/web: exit 0.

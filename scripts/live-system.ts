@@ -113,6 +113,11 @@ export async function launchSystem() {
     async stopApi() {
       await stop(apiProcess);
     },
+    async seedDemo() {
+      const child = start(['--import', 'tsx', 'apps/api/src/cli.ts', 'demo'], root);
+      const code = await new Promise<number | null>((resolve) => child.once('exit', resolve));
+      assert.equal(code, 0, 'live demo seed must succeed');
+    },
     assertCleanLogs() {
       assert.doesNotMatch(logs, /"remoteAddress":"(?!\[Redacted\])[^\"]+"/);
       assert.doesNotMatch(

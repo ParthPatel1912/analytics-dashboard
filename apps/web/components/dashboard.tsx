@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -53,6 +53,10 @@ export function Dashboard() {
   const interval = params.get('interval') === 'hour' ? 'hour' : 'day',
     event = params.get('event') || 'order_created';
   const tz = params.get('tz') || 'UTC';
+  const pendingSearch = useRef<string | null>(null);
+  useEffect(() => {
+    if (pendingSearch.current === params.toString()) pendingSearch.current = null;
+  }, [params]);
   let displayTz = tz;
   try {
     new Intl.DateTimeFormat('en', { timeZone: tz }).format();
@@ -67,10 +71,11 @@ export function Dashboard() {
     [version, setVersion] = useState(0),
     [updated, setUpdated] = useState('');
   function update(changes: Record<string, string>) {
-    const next = new URLSearchParams(params.toString());
-    next.set('from', from);
-    next.set('to', to);
+    const next = new URLSearchParams(pendingSearch.current ?? params.toString());
+    if (!next.has('from')) next.set('from', from);
+    if (!next.has('to')) next.set('to', to);
     for (const [key, value] of Object.entries(changes)) next.set(key, value);
+    pendingSearch.current = next.toString();
     router.replace(`/dashboard?${next}`, { scroll: false });
   }
   useEffect(() => {
@@ -110,7 +115,10 @@ export function Dashboard() {
         }
       })
       .catch((e) => {
-        if (!controller.signal.aborted) setError(e.message);
+        if (!controller.signal.aborted) {
+          setError(e.message);
+          setData(null);
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -134,8 +142,10 @@ export function Dashboard() {
           setFeedError('');
         }
       } catch (e) {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
           setFeedError(e instanceof Error ? e.message : 'Live feed unavailable');
+          setFeed([]);
+        }
       } finally {
         pending = false;
       }

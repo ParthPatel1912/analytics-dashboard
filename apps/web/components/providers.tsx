@@ -35,7 +35,24 @@ function Shell({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('restaurant_cart') || '[]');
-      if (Array.isArray(stored)) setCart(stored.filter((i) => i.item && i.quantity > 0));
+      if (Array.isArray(stored))
+        setCart(
+          stored.filter(
+            (i): i is CartItem =>
+              i &&
+              Number.isInteger(i.quantity) &&
+              i.quantity >= 1 &&
+              i.quantity <= 20 &&
+              i.item &&
+              Number.isInteger(i.item.id) &&
+              i.item.id > 0 &&
+              Number.isInteger(i.item.price) &&
+              i.item.price >= 0 &&
+              ['name', 'description', 'category', 'emoji'].every(
+                (key) => typeof i.item[key] === 'string',
+              ),
+          ),
+        );
     } catch {}
     setReady(true);
   }, []);
