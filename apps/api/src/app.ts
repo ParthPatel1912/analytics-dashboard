@@ -5,8 +5,10 @@ import { z } from 'zod';
 import { config } from './config.js';
 import { hashKey, parseJson } from './seed.js';
 import { ingest } from './ingestion.js';
+import { restaurantRoutes } from './restaurant.js';
+import type { EventTransport } from '../../../packages/sdk-node/src/index.js';
 export const safeEqual = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
-export function buildApp(db: Knex, options: { rateLimit?: number; logger?: boolean } = {}) {
+export function buildApp(db: Knex, options: { rateLimit?: number; logger?: boolean; transport?: EventTransport } = {}) {
   const app = Fastify({ bodyLimit: 256 * 1024, logger: options.logger ?? false, trustProxy: false });
   const windows = new Map<string, { count: number; reset: number }>();
   app.setErrorHandler((err: any, _req, reply) => {
@@ -43,5 +45,6 @@ export function buildApp(db: Knex, options: { rateLimit?: number; logger?: boole
     if (!parsed.success) return reply.code(422).send({ error: 'events must contain 1 to 50 events' });
     return reply.code(202).send(await ingest(db, project.id, parsed.data.events, token ? 'server' : 'browser'));
   });
+  restaurantRoutes(app, db, options.transport);
   return app;
 }
