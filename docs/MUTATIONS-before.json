@@ -1,0 +1,54 @@
+{
+  "command": "node scripts/mutations.mjs",
+  "restoredAllSources": true,
+  "results": [
+    {
+      "mutation": "idempotency-storage",
+      "status": "killed",
+      "failedTests": 1,
+      "totalTests": 18
+    },
+    {
+      "mutation": "api-key",
+      "status": "killed",
+      "failedTests": 1,
+      "totalTests": 5
+    },
+    {
+      "mutation": "origin-allowlist",
+      "status": "killed",
+      "failedTests": 1,
+      "totalTests": 5
+    },
+    {
+      "mutation": "visitor-identity",
+      "status": "killed",
+      "failedTests": 1,
+      "totalTests": 4
+    },
+    {
+      "mutation": "zero-fill",
+      "status": "killed",
+      "failedTests": 2,
+      "totalTests": 4
+    },
+    {
+      "mutation": "order-before-commit",
+      "status": "survived",
+      "failedTests": 0,
+      "totalTests": 4
+    },
+    {
+      "mutation": "sdk-retry",
+      "status": "killed",
+      "failedTests": 1,
+      "totalTests": 10
+    },
+    {
+      "mutation": "sdk-pagehide-beacon",
+      "status": "killed",
+      "failedTests": 1,
+      "totalTests": 10
+    }
+  ]
+}

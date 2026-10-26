@@ -74,3 +74,26 @@ it('rolls back an already-inserted order if writing its items fails', async () =
   expect(await f.db('orders')).toHaveLength(0);
   expect(await f.db('events')).toHaveLength(0);
 });
+it('never calls an external analytics transport before the order transaction commits', async () => {
+  f = await fixture();
+  await f.app.close();
+  let committed = false;
+  const observed: boolean[] = [];
+  f.db.on('query', (q) => {
+    if (/^COMMIT\b/i.test(q.sql)) committed = true;
+  });
+  f.app = buildApp(f.db, {
+    transport: {
+      send: async () => {
+        observed.push(committed);
+      },
+    },
+  });
+  await f.app.ready();
+  const result = await request(f.app.server)
+    .post('/api/orders')
+    .send({ items: [{ menu_item_id: 1, quantity: 1 }] });
+  expect(result.status).toBe(201);
+  await expect.poll(() => observed.length).toBe(1);
+  expect(observed).toEqual([true]);
+});

@@ -9,6 +9,8 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 | A01 | major | README advertises Node 20.19 and root engines allow Node 20, but installed Vitest 5 requires Node 22.12 / 24 / 26+. | Root engines and README now require Node 22.12+ (22.x), 24.x or 26.x. | `setup.test.ts`: minimum-runtime test failed before (20 < 22.12), passed after. | Fixed |
 | A02 | minor | README server example uses undocumented `ANALYTICS_SECRET`, while setup provides `DEMO_SECRET_KEY`. | Example now reads `DEMO_SECRET_KEY`. | `setup.test.ts`: example-env contract failed before, passed after. | Fixed |
 | A03 | major | `.env.local`, `.env.production` and other local secret variants were not ignored. | Ignore `.env.*` except `.env.example`, plus logs and temporary audit output. | `node --test scripts/packages.test.mjs`: ignore test failed before, passed after. | Fixed |
+| A04 | minor | A jsdom test that mocked both cookie accessors left an own-property mock descriptor, breaking later tests. | Restore the prototype cookie accessor during cleanup; preserve every original assertion. | New lifecycle/queue tests initially failed with leaked `blocked` getter; all 39 tests pass after cleanup. | Fixed |
+| A05 | major | Existing tests could not detect external order tracking before commit. | Add an explicit transport observer test across the transaction boundary. | `order-before-commit` mutation survived 4 original order tests, fails with the fifth test. | Fixed (test gap) |
 
 ## Phase 1 — clean-state setup
 
@@ -20,7 +22,7 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 
 1. Clean-state setup: passed.
 2. Static/build: passed.
-3. Test coverage + mutation checks: pending.
+3. Test coverage + mutation checks: passed.
 4. Live end-to-end automation: pending.
 5. Failure modes: pending.
 6. Risky-code review and EXPLAIN: pending.
@@ -50,4 +52,14 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 - Source scan: no TODO/FIXME stubs or skipped/focused/todo tests. console.log is limited to intentional CLI/test/size output; console.debug is guarded by SDK debug option.
 - npm install reports deprecations for transitive whatwg-encoding and prebuild-install. Neither has an audit advisory; replacing the SQLite driver or jsdom solely to hide notices is outside this audit's necessary scope.
 - npm run size: 2,659 gzip bytes before SDK behavior fixes.
+
+
+## Phase 3 — suite audit and mutations
+
+- Serial npm test: 39/39 passed (12 files), API 23, browser/React SDK 14, Node SDK 2.
+- New coverage: direct uniqueness constraint, concurrent duplicates, one bulk insert, exact timestamp limits, per-project Origin/UUID scoping, explicit post-commit external transport observation, visibilitychange beacon, listener cleanup, 200-event cap and reload/outage recovery.
+- Mutation commands: node scripts/mutations.mjs docs/MUTATIONS-before.json and npm run test:mutations. Before: 7 killed / 1 survived. After: all 8 killed, every source restored in finally; see the JSON reports.
+- The first attempted baseline overlapped deliberate mutations and is invalid. It was not counted as a product failure; all subsequent suite/mutation runs are serial.
+- Initial added tests exposed a leaked accessor mock (A04); 37/39 passed before fixture cleanup, 39/39 after. Concurrent Supertest uses one explicitly listening server, avoiding artificial MaxListeners warnings.
+- No .skip, .only or .todo tests. The smoke test delegates to a helper containing real node:assert checks. Tests have meaningful assertions; no existing assertion was removed.
 

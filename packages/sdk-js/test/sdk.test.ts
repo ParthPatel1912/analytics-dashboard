@@ -38,6 +38,9 @@ beforeEach(() => {
 afterEach(() => {
   instances.splice(0).forEach((a) => a.shutdown());
   vi.restoreAllMocks();
+  // Restoring getter and setter spies on one property can leave an own-property
+  // mock descriptor behind. Return this jsdom instance to its prototype accessor.
+  delete (document as any).cookie;
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
@@ -203,4 +206,42 @@ it('supports later opt-in and storage-free in-memory identity', async () => {
   expect(id?.anonymous_id).toBeTruthy();
   c.track('safe');
   expect(c.getIdentity()?.anonymous_id).toBe(id?.anonymous_id);
+});
+it('uses beacon only when visibility becomes hidden and removes lifecycle listeners at shutdown', () => {
+  const beacon = vi.fn(() => true);
+  Object.defineProperty(navigator, 'sendBeacon', { value: beacon, configurable: true });
+  const a = create();
+  a.track('queued');
+  vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+  document.dispatchEvent(new Event('visibilitychange'));
+  expect(beacon).not.toHaveBeenCalled();
+  vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+  document.dispatchEvent(new Event('visibilitychange'));
+  expect(beacon).toHaveBeenCalledOnce();
+  a.shutdown();
+  beacon.mockClear();
+  document.dispatchEvent(new Event('visibilitychange'));
+  window.dispatchEvent(new Event('pagehide'));
+  expect(beacon).not.toHaveBeenCalled();
+});
+it('persists no more than 200 pending events and recovers acknowledged delivery after an outage', async () => {
+  vi.mocked(fetch).mockRejectedValue(new Error('API unavailable'));
+  const a = create();
+  for (let i = 0; i < 240; i++) a.track('queued', { sequence: i });
+  await vi.advanceTimersByTimeAsync(0);
+  const pending = JSON.parse(localStorage.getItem('ta_test_queue')!);
+  expect(pending).toHaveLength(200);
+  expect(pending[0].event.properties.sequence).toBe(40);
+  a.shutdown();
+  await vi.advanceTimersByTimeAsync(0);
+  const b = create();
+  vi.mocked(fetch).mockImplementation(async (_url, init) => {
+    sent.push(JSON.parse(String(init!.body)));
+    return ok() as any;
+  });
+  await b.flush();
+  expect(sent.flatMap((batch) => batch.events).map((e) => e.properties.sequence)).toEqual(
+    Array.from({ length: 200 }, (_, i) => i + 40),
+  );
+  expect(JSON.parse(localStorage.getItem('ta_test_queue')!)).toEqual([]);
 });
