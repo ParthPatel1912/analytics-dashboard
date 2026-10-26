@@ -1,0 +1,1 @@
+{"name":"@app/web","private":true,"scripts":{"dev":"next dev","build":"next build","start":"next start"},"dependencies":{"@pkg/sdk-js":"*","dotenv":"^17.0.0","next":"^16.4.3","react":"^19.0.0","react-dom":"^19.0.0","recharts":"^3.0.0"}}

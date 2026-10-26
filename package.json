@@ -1,0 +1,41 @@
+{
+  "name": "table-and-tally",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run build:sdks && npm run setup && concurrently -k -n api,web \"npm run dev -w @app/api\" \"npm run dev -w @app/web\"",
+    "build:sdks": "npm run build -w @pkg/sdk-js && npm run build -w @pkg/sdk-node",
+    "build": "npm run build:sdks && npm run build -w @app/api && npm run build -w @app/web",
+    "setup": "tsx apps/api/src/cli.ts setup",
+    "migrate": "tsx apps/api/src/cli.ts migrate",
+    "seed:demo": "tsx apps/api/src/cli.ts demo",
+    "smoke": "tsx apps/api/test/smoke.ts",
+    "test": "vitest run",
+    "test:api": "vitest run apps/api",
+    "test:sdk": "vitest run packages",
+    "typecheck": "tsc --noEmit -p apps/api && tsc --noEmit -p packages/sdk-js && tsc --noEmit -p packages/sdk-node && tsc --noEmit -p apps/web",
+    "size": "node scripts/size.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/supertest": "^6.0.0",
+    "concurrently": "^9.0.0",
+    "jsdom": "^26.0.0",
+    "supertest": "^7.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
+  }
+}
