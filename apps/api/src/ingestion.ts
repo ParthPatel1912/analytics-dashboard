@@ -5,7 +5,8 @@ export const eventSchema = z.object({
   event_id: z
     .string()
     .uuid()
-    .refine((v) => v[14] === '4', 'event_id must be UUID v4'),
+    .refine((v) => v[14] === '4', 'event_id must be UUID v4')
+    .transform((v) => v.toLowerCase()),
   name: z
     .string()
     .max(100)

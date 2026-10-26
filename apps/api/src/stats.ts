@@ -4,13 +4,13 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { config } from './config.js';
 import { parseJson } from './seed.js';
 import { bucketPlan, type Range, type Interval } from './buckets.js';
-import { timingSafeEqual } from 'node:crypto';
+import { safeEqual, bearerToken } from './auth.js';
 function error(message: string) {
   return Object.assign(new Error(message), { statusCode: 422 });
 }
 function date(value: string, end: boolean) {
   const dayOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
-  if (!dayOnly && !/^\d{4}-\d{2}-\d{2}T.*Z$/.test(value))
+  if (!dayOnly && !z.string().datetime().safeParse(value).success)
     throw error('dates must be UTC ISO timestamps or YYYY-MM-DD');
   const normalized = new Date(
     dayOnly ? `${value}T${end ? '23:59:59.999' : '00:00:00.000'}Z` : value,
@@ -66,10 +66,8 @@ export async function timeseries(
 }
 export function statsRoutes(app: FastifyInstance, db: Knex) {
   async function auth(req: FastifyRequest) {
-    const token = req.headers.authorization?.replace(/^Bearer /, '') || '';
-    const a = Buffer.from(token),
-      b = Buffer.from(config.dashboardToken);
-    if (a.length !== b.length || !timingSafeEqual(a, b))
+    const token = bearerToken(req.headers.authorization);
+    if (!token || !safeEqual(token, config.dashboardToken))
       throw Object.assign(new Error('invalid_dashboard_token'), { statusCode: 401 });
     const project = await db('projects').where({ public_key: config.publicKey }).first();
     if (!project) throw Object.assign(new Error('project_not_found'), { statusCode: 404 });

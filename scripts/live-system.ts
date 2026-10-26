@@ -114,6 +114,7 @@ export async function launchSystem() {
       await stop(apiProcess);
     },
     assertCleanLogs() {
+      assert.doesNotMatch(logs, /"remoteAddress":"(?!\[Redacted\])[^\"]+"/);
       assert.doesNotMatch(
         logs,
         /UnhandledPromiseRejection|uncaughtException|ERR_UNHANDLED_REJECTION/,

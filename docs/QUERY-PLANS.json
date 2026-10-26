@@ -1,0 +1,142 @@
+{
+  "engine": "SQLite",
+  "fixtureEvents": 3619,
+  "plans": {
+    "overview": {
+      "sql": "select count(*) as `total`, COUNT(DISTINCT COALESCE(user_id, anonymous_id)) AS visitors from `events` where `project_id` = ? and `occurred_at` between ? and ?",
+      "bindings": [
+        1,
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-25T23:59:59.999Z"
+      ],
+      "plan": [
+        {
+          "id": 3,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR count(DISTINCT)"
+        },
+        {
+          "id": 6,
+          "parent": 0,
+          "notused": 48,
+          "detail": "SEARCH events USING INDEX events_project_id_occurred_at_index (project_id=? AND occurred_at>? AND occurred_at<?)"
+        }
+      ]
+    },
+    "timeseries": {
+      "sql": "select CASE WHEN occurred_at >= ? AND occurred_at < ? THEN strftime(?, occurred_at, ?) END as `bucket`, count(*) as `value` from `events` where `project_id` = ? and `occurred_at` between ? and ? group by `bucket`",
+      "bindings": [
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-26T00:00:00.000Z",
+        "%Y-%m-%d",
+        "+330 minutes",
+        1,
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-25T23:59:59.999Z"
+      ],
+      "plan": [
+        {
+          "id": 6,
+          "parent": 0,
+          "notused": 45,
+          "detail": "SEARCH events USING COVERING INDEX events_project_id_occurred_at_index (project_id=? AND occurred_at>? AND occurred_at<?)"
+        },
+        {
+          "id": 17,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR GROUP BY"
+        }
+      ]
+    },
+    "pages": {
+      "sql": "select `path`, count(*) as `views` from `events` where `project_id` = ? and `occurred_at` between ? and ? and `name` = ? group by `path` order by `views` desc",
+      "bindings": [
+        1,
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-25T23:59:59.999Z",
+        "page_view"
+      ],
+      "plan": [
+        {
+          "id": 8,
+          "parent": 0,
+          "notused": 49,
+          "detail": "SEARCH events USING INDEX events_project_id_name_occurred_at_index (project_id=? AND name=? AND occurred_at>? AND occurred_at<?)"
+        },
+        {
+          "id": 22,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR GROUP BY"
+        },
+        {
+          "id": 57,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ]
+    },
+    "events": {
+      "sql": "select `name`, count(*) as `count` from `events` where `project_id` = ? and `occurred_at` between ? and ? group by `name`",
+      "bindings": [
+        1,
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-25T23:59:59.999Z"
+      ],
+      "plan": [
+        {
+          "id": 6,
+          "parent": 0,
+          "notused": 53,
+          "detail": "SEARCH events USING COVERING INDEX events_project_id_name_occurred_at_index (project_id=?)"
+        }
+      ]
+    },
+    "recent": {
+      "sql": "select * from `events` where `project_id` = ? and `occurred_at` between ? and ? order by `occurred_at` desc, `id` desc limit ?",
+      "bindings": [
+        1,
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-25T23:59:59.999Z",
+        50
+      ],
+      "plan": [
+        {
+          "id": 7,
+          "parent": 0,
+          "notused": 48,
+          "detail": "SEARCH events USING INDEX events_project_id_occurred_at_index (project_id=? AND occurred_at>? AND occurred_at<?)"
+        }
+      ]
+    }
+  },
+  "dialectCompilation": {
+    "pg": {
+      "sql": "select CASE WHEN occurred_at >= $1 AND occurred_at < $2 THEN to_char((CAST(occurred_at AS timestamptz) AT TIME ZONE 'UTC') + ($3 * interval '1 minute'), $4) END as \"bucket\", count(*) as \"value\" from \"events\" where \"project_id\" = $5 and \"occurred_at\" between $6 and $7 group by \"bucket\"",
+      "bindings": [
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-26T00:00:00.000Z",
+        330,
+        "YYYY-MM-DD\"T\"HH24:00",
+        1,
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-25T23:59:59.999Z"
+      ]
+    },
+    "mysql2": {
+      "sql": "select CASE WHEN occurred_at >= ? AND occurred_at < ? THEN DATE_FORMAT(DATE_ADD(STR_TO_DATE(occurred_at, '%Y-%m-%dT%H:%i:%s.%fZ'), INTERVAL ? MINUTE), ?) END as `bucket`, count(*) as `value` from `events` where `project_id` = ? and `occurred_at` between ? and ? group by `bucket`",
+      "bindings": [
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-26T00:00:00.000Z",
+        330,
+        "%Y-%m-%dT%H:00",
+        1,
+        "2026-10-25T00:00:00.000Z",
+        "2026-10-25T23:59:59.999Z"
+      ]
+    }
+  }
+}

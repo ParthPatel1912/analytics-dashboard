@@ -41,18 +41,21 @@ export class HttpTransport implements EventTransport {
         if (response.status < 500 && response.status !== 429)
           throw Object.assign(new Error(`Analytics HTTP ${response.status}`), { permanent: true });
         const retryAfter = response.headers.get('Retry-After');
-        if (retryAfter)
-          delay = Math.max(
-            delay,
-            /^\d+$/.test(retryAfter)
-              ? Number(retryAfter) * 1000
-              : Date.parse(retryAfter) - Date.now(),
-          );
+        if (retryAfter) {
+          const serverDelay = /^\d+(\.\d+)?$/.test(retryAfter)
+            ? Number(retryAfter) * 1000
+            : Date.parse(retryAfter) - Date.now();
+          if (Number.isFinite(serverDelay)) delay = Math.max(delay, serverDelay);
+        }
       } catch (error: any) {
         if (error.permanent || attempt === 2) throw error;
       }
       if (attempt === 2) throw new Error('Analytics transport exhausted retries');
-      await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 60000)));
+      const deadline = Date.now() + delay;
+      while (Date.now() < deadline)
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.min(deadline - Date.now(), 2147483647)),
+        );
     }
   }
 }

@@ -1,5 +1,4 @@
 import Fastify from 'fastify';
-import { timingSafeEqual } from 'node:crypto';
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import { config } from './config.js';
@@ -8,8 +7,8 @@ import { ingest } from './ingestion.js';
 import { restaurantRoutes } from './restaurant.js';
 import type { EventTransport } from '../../../packages/sdk-node/src/index.js';
 import { statsRoutes } from './stats.js';
-export const safeEqual = (a: string, b: string) =>
-  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+import { safeEqual, bearerToken } from './auth.js';
+export { safeEqual } from './auth.js';
 export function buildApp(
   db: Knex,
   options: { rateLimit?: number; logger?: boolean; transport?: EventTransport } = {},
@@ -58,7 +57,7 @@ export function buildApp(
   app.get('/health', async () => ({ status: 'ok' }));
   app.post('/api/v1/events/batch', async (req, reply) => {
     const body = req.body as any;
-    const token = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
+    const token = bearerToken(req.headers.authorization);
     const publicKey =
       req.headers['x-analytics-key'] || (req.query as any).write_key || body?.write_key;
     const project = token
@@ -69,6 +68,8 @@ export function buildApp(
         ? await db('projects').where({ public_key: publicKey }).first()
         : null;
     if (!project) return reply.code(401).send({ error: 'invalid_key' });
+    if (token && !safeEqual(hashKey(token), project.secret_key_hash))
+      return reply.code(401).send({ error: 'invalid_key' });
     if (
       !token &&
       (!req.headers.origin || !parseJson(project.allowed_origins).includes(req.headers.origin))

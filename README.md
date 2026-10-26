@@ -33,7 +33,7 @@ npm run build        # SDK packages, backend typecheck, production Next.js build
 npm run size         # after build: browser IIFE gzip size; fails at 5 KiB
 ```
 
-Browser SDK IIFE measured **2,659 bytes gzip (2.60 KiB)** at implementation. Re-run `size` for the current measurement. React is a separate optional peer/entry and is excluded from that bundle. Start the built web app with `npm start -w @app/web`, and the API with `npx tsx apps/api/src/index.ts` under a process manager (without watch mode).
+Browser SDK IIFE measured **2,754 bytes gzip (2.69 KiB)** after the audit fixes. Re-run `size` for the current measurement. React is a separate optional peer/entry and is excluded from that bundle. Start the built web app with `npm start -w @app/web`, and the API with `npx tsx apps/api/src/index.ts` under a process manager (without watch mode).
 
 ## Five-line browser integration
 

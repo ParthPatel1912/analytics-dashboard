@@ -16,6 +16,12 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 | A08 | major | A fetch that never settled held the SDK busy forever. | Abort each fetch after 10 seconds and enter ordinary retry/backoff. | Hung-fetch recovery test failed before (one attempt), passed after (delivery on retry). | Fixed |
 | A09 | minor | Old Retry-After state survived opt-out and delayed later opted-in events. | Cancel backoff and clear its deadline during opt-out. | Immediate new-event delivery regression failed before, passed after. | Fixed |
 | A10 | minor | Wholly invalid huge/deep-property batches returned 202, conflicting with the newer QA request's clean-4xx rule. | Return indexed 422 when every event is rejected; preserve partial-batch 202. | API failure regression failed before (202), passed after (422); mixed batch remains 202. | Fixed |
+| A11 | minor | Dashboard auth accepted a bare token; both auth parsers rejected valid differently cased Bearer schemes. | Shared strict, case-insensitive Bearer parser on ingestion and every query route. | Two auth regressions failed before, passed after. | Fixed |
+| A12 | minor | Credential helper compared character lengths before byte buffers, throwing on some UTF-8 inputs. | Compare byte lengths before timingSafeEqual; use helper for fixed hash/token comparisons. | UTF-8 no-throw regression failed before, passed after. | Fixed |
+| A13 | minor | Full timestamp query dates silently rolled invalid calendar dates into another day. | Validate full UTC timestamps before Date normalization. | Invalid February date / 24:00 regressions failed before, passed after. | Fixed |
+| A14 | major | Equivalent uppercase/lowercase event UUIDs could create two rows in SQLite. | Canonicalize validated event UUIDs to lowercase. | Case-variant replay regression failed before, passed after. | Fixed |
+| A15 | minor | Node HTTP transport retried before Retry-After when delay exceeded one minute. | Honor the server deadline, splitting only for platform timer limits. | 120-second fake-clock regression failed before, passed after. | Fixed |
+| A16 | minor | Malformed Node Retry-After produced NaN and an immediate retry. | Ignore non-finite parsed delays and retain exponential delay. | Malformed-header regression failed before, passed after. | Fixed |
 
 ## Phase 1 — clean-state setup
 
@@ -30,7 +36,7 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 3. Test coverage + mutation checks: passed.
 4. Live end-to-end automation: passed.
 5. Failure modes: passed.
-6. Risky-code review and EXPLAIN: pending.
+6. Risky-code review and EXPLAIN: passed (SQLite + PostgreSQL runtime; MySQL compilation only).
 7. Dashboard/browser checks: pending.
 8. Documentation + final clean verification: pending.
 
@@ -84,4 +90,16 @@ Started 26 October 2026. This file records commands actually run, findings, regr
 - Malformed JSON 400, unsupported XML 415, Fastify-parsed plain text 422, empty JSON body 400, wholly huge/deep properties 422; API stayed healthy. The first harness expectation incorrectly assumed text/plain was unsupported; this was corrected to test both the built-in text parser and unsupported XML, without changing production media handling.
 - Server logs checked for uncaught/unhandled errors and actual generated secrets; none found. Existing order-rollback and tracking-failure isolation tests remain passing.
 - npm run typecheck: exit 0.
+
+
+## Phase 6 — risky code, storage and performance
+
+- Reviewed ingestion/auth/stats/bucketing/migrations, restaurant commit scheduling, both SDK implementations and React lifecycle line by line. Raw SQL expressions are fixed/allowlisted fragments; all event values, date bounds, offsets and user filters are bound. Ingestion uses one bulk insert within a transaction and storage-level unique UUID constraint.
+- Before auth/date/UUID fixes: review.test.ts 1 passed / 5 failed. After: 6/6 passed. Node retry tests before 2/4 passed, after 4/4.
+- npm run explain: exit 0. See docs/QUERY-PLANS.json for actual SQLite plans and bound PostgreSQL/MySQL compilation. Overview/recent use project+time; timeseries uses its covering index; pages use project+name+time; event breakdown uses the project/name/time covering index. GROUP BY / COUNT DISTINCT temp B-trees remain expected, with rollups a scale improvement.
+- Temporary npm binary package @embedded-postgres/windows-x64@18.4.0-beta.17 installed only under ignored .audit/postgres-runtime with scripts disabled. No application dependency or system service added. Its postgres --version reported PostgreSQL 18.4.
+- npm run test:postgres:local: exit 0; actual PostgreSQL migrations, seed, concurrent idempotency, every query endpoint, identity, timezone/zero filling, server-priced checkout, post-commit event and invalid-order isolation passed. Generated cluster/schema stopped and removed afterward.
+- Secrets stored only as SHA-256 hashes; UTF-8-safe constant-time comparison is used after fixed-hash lookup and for dashboard tokens. Direct API routes all require a Bearer token. Logs redact raw IP and credentials; live harness asserts both. UA truncation and absence of IP columns tested. Demo raw identity privacy is checked in browser phase.
+- SDK fetch timeout and shutdown/consent cleanup tested; methods contain guarded synchronous/async boundaries and no framework/runtime dependency in the browser core. npm run build:sdks, npm run typecheck passed; npm run size measured 2,754 gzip bytes (2.69 KiB), README corrected.
+- MySQL SQL compilation is verified; MySQL runtime/collation behavior still needs a running service and is explicitly not claimed as verified.
 

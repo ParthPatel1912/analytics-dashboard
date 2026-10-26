@@ -43,3 +43,49 @@ it('HTTP transport sends bearer auth and retries stable IDs', async () => {
     vi.useRealTimers();
   }
 });
+it('respects Retry-After longer than one minute', async () => {
+  vi.useFakeTimers();
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      headers: new Headers({ 'Retry-After': '120' }),
+    })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ rejected: [] }) });
+  vi.stubGlobal('fetch', fetcher);
+  try {
+    const pending = new HttpTransport('https://example.test/events', 'test-secret').send([]);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(60000);
+    await pending;
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  }
+});
+it('keeps exponential delay when Retry-After is malformed instead of retrying immediately', async () => {
+  vi.useFakeTimers();
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      headers: new Headers({ 'Retry-After': 'invalid-date' }),
+    })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ rejected: [] }) });
+  vi.stubGlobal('fetch', fetcher);
+  try {
+    const pending = new HttpTransport('https://example.test/events', 'test-secret').send([]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(200);
+    await pending;
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  }
+});
