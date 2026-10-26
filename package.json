@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:api": "vitest run apps/api",
     "test:sdk": "vitest run packages",
+    "test:packages": "npm run build:sdks && node --test scripts/packages.test.mjs",
     "typecheck": "tsc --noEmit -p apps/api && tsc --noEmit -p packages/sdk-js && tsc --noEmit -p packages/sdk-node && tsc --noEmit -p apps/web",
     "size": "node scripts/size.mjs"
   },

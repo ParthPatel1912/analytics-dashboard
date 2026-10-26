@@ -2,6 +2,10 @@ node_modules/
 dist/
 .next/
 .env
+.env.*
+!.env.example
+*.log
+.audit/
 *.sqlite*
 coverage/
 *.tsbuildinfo
