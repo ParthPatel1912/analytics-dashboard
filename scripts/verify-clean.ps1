@@ -6,7 +6,7 @@ Set-Location -LiteralPath $taskRoot
 $records = [Collections.Generic.List[object]]::new()
 function Save-Result([string]$State) {
   @{ status=$State; node=(& node --version); checks=$records.ToArray() } |
-    ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $taskRoot 'docs/AUDIT-FINAL.json')
+    ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $taskRoot '.audit/final/results.json')
 }
 function Invoke-NpmCheck([string]$Name, [string[]]$CommandArguments) {
   $watch = [Diagnostics.Stopwatch]::StartNew()
@@ -54,5 +54,5 @@ try {
   Invoke-NpmCheck 'bundle-size' @('run','size')
   Invoke-NpmCheck 'dependency-audit' @('audit')
   Save-Result 'passed'
-  Write-Output 'CLEAN VERIFICATION PASSED. See docs/AUDIT-FINAL.json and .audit/final/*.log.'
+  Write-Output 'CLEAN VERIFICATION PASSED. See .audit/final/results.json and .audit/final/*.log.'
 } catch { Save-Result 'failed'; throw }

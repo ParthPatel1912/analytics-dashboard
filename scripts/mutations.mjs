@@ -136,7 +136,8 @@ for (const mutation of cases) {
     for (const [path, source] of originals) writeFileSync(path, source);
   }
 }
-const path = process.argv[2] || 'docs/MUTATIONS.json';
+mkdirSync('.audit', { recursive: true });
+const path = process.argv[2] || '.audit/MUTATIONS.json';
 writeFileSync(
   path,
   JSON.stringify(

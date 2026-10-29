@@ -44,7 +44,7 @@ Browser SDK IIFE measured **2,910 bytes gzip (2.84 KiB)** after the audit fixes.
 
 Playwright uses installed Edge on Windows. On other platforms install its browser with `npx playwright install chromium`; `PLAYWRIGHT_CHANNEL` can select another installed supported browser. Live tests start their own ephemeral servers and isolated databases/credentials. They need no manually running dev server and do not alter your developer data. No lint configuration exists; the commands above are the configured checks.
 
-On Windows, `./scripts/verify-clean.ps1` reproduces the complete audit from a clean demo checkout. It deliberately deletes generated dependencies/build outputs, `.env`, local SQLite demo data and audit scratch files, then reinstalls and verifies everything serially. Results are saved incrementally in `docs/AUDIT-FINAL.json`.
+On Windows, `./scripts/verify-clean.ps1` reproduces the complete audit from a clean demo checkout. It deliberately deletes generated dependencies/build outputs, `.env`, local SQLite demo data and audit scratch files, then reinstalls and verifies everything serially. Results are saved incrementally in `.audit/final/results.json`.
 
 ## Five-line browser integration
 
@@ -66,7 +66,7 @@ const tracker = new ServerTracker(new HttpTransport(endpoint, process.env.DEMO_S
 await tracker.track('order_created', { order_id: 'opaque-id', total: 2500, item_count: 2, currency: 'USD' }, userId, anonymousId, sessionId);
 ```
 
-Schedule tracking **after the business transaction commits**, and outside the checkout response path. The demo registers Fastify's `onResponse` hook and uses `InProcessTransport` (same ingestion service, no HTTP hop). External applications implement `EventTransport` or use `HttpTransport`, which retries stable UUIDs. Tracker errors never escape into business code. See [decisions](docs/DECISIONS.md) for the durability limitation of after-response work.
+Schedule tracking **after the business transaction commits**, and outside the checkout response path. The demo registers Fastify's `onResponse` hook and uses `InProcessTransport` (same ingestion service, no HTTP hop). External applications implement `EventTransport` or use `HttpTransport`, which retries stable UUIDs. Tracker errors never escape into business code. A process crash after commit but before tracking can lose an event; use a transactional outbox for durable delivery.
 
 ## Configuration
 
@@ -99,7 +99,6 @@ apps/api/            ingestion, SQL stats, restaurant, migrations, seeds, tests
 apps/web/            App Router UI + same-origin proxies
 packages/sdk-js/     browser SDK + separate React helper
 packages/sdk-node/   ServerTracker + transport interface + HTTP transport
-docs/                setup, contract, assumptions, tradeoffs
 ```
 
-Read [runnable API examples](docs/API.md), [engineering decisions](docs/DECISIONS.md), [extended setup](docs/README.md), and the [audit](docs/AUDIT.md). SQLite and PostgreSQL 18.4 runtime contracts were tested. MySQL SQL compiles; MySQL runtime/collation behavior remains unverified. Browser tests verify checkout, live events, filters and failure states. See [verification results](docs/VERIFICATION.md) and the [audited screenshot](docs/audit-dashboard.png).
+Executable API checks are in `scripts/api-examples.mjs`. SQLite and PostgreSQL runtime contracts are tested; MySQL runtime/collation behavior remains unverified.

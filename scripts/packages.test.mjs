@@ -48,11 +48,11 @@ test('built SDK exports and declarations exist, and core imports safely without 
   ])
     assert.ok(existsSync(path), path);
 });
-test('README and verification document report the measured browser gzip size', () => {
+test('README reports the measured browser gzip size', () => {
   const size = gzipSync(
     readFileSync('packages/sdk-js/dist/browser/index.global.js'),
   ).length.toLocaleString('en-US');
-  for (const path of ['README.md', 'docs/VERIFICATION.md'])
+  for (const path of ['README.md'])
     assert.ok(
       readFileSync(path, 'utf8').includes(size + ' bytes'),
       `${path} must report ${size} bytes`,

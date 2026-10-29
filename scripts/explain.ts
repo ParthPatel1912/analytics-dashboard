@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { createDb, migrate } from '../apps/api/src/db.js';
 import { seedDemo } from '../apps/api/src/demo.js';
 import { bucketPlan } from '../apps/api/src/buckets.js';
@@ -55,8 +55,9 @@ try {
       .toNative();
     await other.destroy();
   }
+  await mkdir('.audit', { recursive: true });
   await writeFile(
-    'docs/QUERY-PLANS.json',
+    '.audit/QUERY-PLANS.json',
     JSON.stringify(
       { engine: 'SQLite', fixtureEvents: 3619, plans, dialectCompilation: dialects },
       null,

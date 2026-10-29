@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { launchSystem } from './live-system.js';
 const system = await launchSystem();
 try {
-  const child = spawn(process.execPath, ['docs/api-examples.mjs'], {
+  const child = spawn(process.execPath, ['scripts/api-examples.mjs'], {
     env: {
       ...process.env,
       API_EXAMPLE_BASE: system.api,

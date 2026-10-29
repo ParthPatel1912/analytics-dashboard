@@ -1,4 +1,4 @@
-// Run from the repository root: node --env-file=.env docs/api-examples.mjs
+// Run from the repository root: node --env-file=.env scripts/api-examples.mjs
 // Creates demonstration events and one demonstration order. No payment is taken.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
